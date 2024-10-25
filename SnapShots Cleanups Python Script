@@ -1,0 +1,32 @@
+import boto3
+import schedule
+from operator import itemgetter
+
+ec2_client = boto3.client('ec2', region_name="us-east-1")  # this is the region where the snapshots are located
+
+snapshots = ec2_client.describe_snapshots( # this gives the list of snapshots
+  OwnerIds=['self']
+)
+
+sorted_by_date = sorted(snapshots['Snapshots'], key=itemgetter('StartTime'), reverse=True) # this is the list of snapshots sorted by the most recent
+
+# for snap in snapshots["Snapshots"]: "this is for generating the list of snapshots in no particular order"
+  #  print(snap['StartTime'])
+
+#p rint('##########')
+
+# for snap in sorted_by_date: "this is for generating the list of snapshots in order of the most recent"
+   # print(snap['StartTime'])
+
+def delete_volume_snapshots():
+    for snap in sorted_by_date[2:]: # this is for deleting the snapshots that are older than the 2 most recent
+        response = ec2_client.delete_snapshot(
+            SnapshotId=snap['SnapshotId']
+        )
+        print(response)
+
+    
+schedule.every(10).seconds.do(delete_volume_snapshots) # this is for running the script every 20 seconds
+
+while True:
+  schedule.run_pending()
